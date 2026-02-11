@@ -201,6 +201,15 @@
   <div class="chartWrap" style="margin-top:20px;">
     <canvas id="scatterChart"></canvas>
   </div>
+
+  <div class="chartWrap" style="margin-top:20px;">
+    <canvas id="sleepScoreChart"></canvas>
+  </div>
+
+  <div class="chartWrap" style="margin-top:20px;">
+    <canvas id="moneyScoreChart"></canvas>
+  </div>
+
 </div>
 
 
@@ -213,6 +222,8 @@ let lastWorst = null;
 
 let histChartRef = null;
 let scatterChartRef = null;
+let sleepScoreChartRef = null;
+let moneyScoreChartRef = null;
 
 async function runSimulation() {
   const output = document.getElementById("output");
@@ -249,7 +260,7 @@ async function runSimulation() {
     const data = JSON.parse(text);
 
     console.log("STATS:", data.stats);
-
+    window.lastSettings = data.settings;
     renderResults(data);
     requestAnimationFrame(() => {
         renderStatsCharts(data.stats);
@@ -472,6 +483,11 @@ function renderTimelineText(timeline) {
   return `<div class="timeline-text">${lines.join("<br>")}</div>`;
 }
 
+let histChartRef = null;
+let scatterChartRef = null;
+let sleepScoreChartRef = null;
+let moneyScoreChartRef = null;
+
 function renderStatsCharts(stats) {
   if (!stats) return;
   if (typeof Chart === "undefined") return;
@@ -479,22 +495,24 @@ function renderStatsCharts(stats) {
   requestAnimationFrame(() => {
     const histCanvas = document.getElementById("histChart");
     const scatterCanvas = document.getElementById("scatterChart");
+    const sleepScoreCanvas = document.getElementById("sleepScoreChart");
+    const moneyScoreCanvas = document.getElementById("moneyScoreChart");
 
-    if (!histCanvas || !scatterCanvas) return;
+    if (!histCanvas || !scatterCanvas || !sleepScoreCanvas || !moneyScoreCanvas) return;
 
+    // -----------------------------
     // 기존 차트 제거
-    if (histChartRef) {
-      histChartRef.destroy();
-      histChartRef = null;
-    }
-    if (scatterChartRef) {
-      scatterChartRef.destroy();
-      scatterChartRef = null;
-    }
+    // -----------------------------
+    if (histChartRef) { histChartRef.destroy(); histChartRef = null; }
+    if (scatterChartRef) { scatterChartRef.destroy(); scatterChartRef = null; }
+    if (sleepScoreChartRef) { sleepScoreChartRef.destroy(); sleepScoreChartRef = null; }
+    if (moneyScoreChartRef) { moneyScoreChartRef.destroy(); moneyScoreChartRef = null; }
 
-    // =========================
+    const samples = stats.money_fatigue_scatter || [];
+
+    // =============================
     // 1️⃣ Score Histogram
-    // =========================
+    // =============================
     const h = stats.score_hist;
     const edges = h.edges || [];
     const counts = h.counts || [];
@@ -516,22 +534,17 @@ function renderStatsCharts(stats) {
       },
       options: {
         responsive: true,
-        maintainAspectRatio: false,   // 🔥 중요
-        plugins: {
-          legend: { display: true }
-        },
+        maintainAspectRatio: false,
         scales: {
-          y: {
-            beginAtZero: true
-          }
+          y: { beginAtZero: true }
         }
       }
     });
 
-    // =========================
-    // 2️⃣ Money vs Fatigue Scatter
-    // =========================
-    const pts = (stats.money_fatigue_scatter || []).map(p => ({
+    // =============================
+    // 2️⃣ Money vs Fatigue
+    // =============================
+    const ptsMoneyFatigue = samples.map(p => ({
       x: p.money,
       y: p.fatigue
     }));
@@ -541,36 +554,89 @@ function renderStatsCharts(stats) {
       data: {
         datasets: [{
           label: "Money vs Fatigue",
-          data: pts,
+          data: ptsMoneyFatigue,
           pointRadius: 2
         }]
       },
       options: {
         responsive: true,
-        maintainAspectRatio: false,   // 🔥 중요
-        plugins: {
-          legend: { display: true }
-        },
+        maintainAspectRatio: false,
+        scales: {
+          x: { title: { display: true, text: "Money (won)" } },
+          y: { title: { display: true, text: "Fatigue" } }
+        }
+      }
+    });
+
+    // =============================
+    // 3️⃣ Sleep vs Score
+    // =============================
+    const ptsSleepScore = samples
+      .filter(p => typeof p.sleep_h === "number")
+      .map(p => ({
+        x: p.sleep_h,
+        y: p.score
+      }));
+
+    sleepScoreChartRef = new Chart(sleepScoreCanvas.getContext("2d"), {
+      type: "scatter",
+      data: {
+        datasets: [{
+          label: "Sleep vs Score",
+          data: ptsSleepScore,
+          pointRadius: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
         scales: {
           x: {
-            title: {
-              display: true,
-              text: "Money (won)"
-            }
+            title: { display: true, text: "Sleep (hours)" },
+            min: 0,
+            max: 12
           },
           y: {
-            title: {
-              display: true,
-              text: "Fatigue"
-            }
+            title: { display: true, text: "Score" }
           }
         }
       }
     });
 
-    // 혹시 모를 레이아웃 문제 방지
+    // =============================
+    // 4️⃣ Money vs Score
+    // =============================
+    const ptsMoneyScore = samples.map(p => ({
+      x: p.money,
+      y: p.score
+    }));
+
+    moneyScoreChartRef = new Chart(moneyScoreCanvas.getContext("2d"), {
+      type: "scatter",
+      data: {
+        datasets: [{
+          label: "Money vs Score",
+          data: ptsMoneyScore,
+          pointRadius: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: { title: { display: true, text: "Money (won)" } },
+          y: { title: { display: true, text: "Score" } }
+        }
+      }
+    });
+
+    // -----------------------------
+    // 강제 리사이즈 (안전장치)
+    // -----------------------------
     histChartRef.resize();
     scatterChartRef.resize();
+    sleepScoreChartRef.resize();
+    moneyScoreChartRef.resize();
   });
 }
 

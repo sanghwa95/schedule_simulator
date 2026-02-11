@@ -342,12 +342,12 @@ def run_simulation(
         # ---- (D) 그래프용 샘플 저장 (reservoir sampling) ----
         if scatter_sample_n > 0:
             if len(scatter_samples) < scatter_sample_n:
-                scatter_samples.append((money, fatigue, score))
+                scatter_samples.append((money, fatigue, score, sleep_h))
             else:
                 # stream_i is current index (0-based) of the stream
                 j = rng.randint(0, stream_i)
                 if j < scatter_sample_n:
-                    scatter_samples[j] = (money, fatigue, score)
+                    scatter_samples[j] = (money, fatigue, score, sleep_h)
         stream_i += 1
 
         blocks = compress(grid, slot)
@@ -426,8 +426,8 @@ def run_simulation(
 
     # ---- (D) scatter JSON ----
     scatter = [
-        {"money": float(m), "fatigue": float(f), "score": float(s)}
-        for (m, f, s) in scatter_samples
+        {"money": float(m), "fatigue": float(f), "score": float(s), "sleep_h": float(sh),}
+        for (m, f, s, sh) in scatter_samples
     ]
 
     top_n = min(top, len(best_rows))
