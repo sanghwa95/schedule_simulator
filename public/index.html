@@ -72,7 +72,13 @@
       color: #0070f3;
     }
 
-    .dial-wrap { margin-top: 10px; }
+    .dial-wrap {
+      margin-top: 10px;
+      display: flex;
+      align-items: center;   /* 수직 정렬 */
+      gap: 24px;             /* 그래프와 legend 사이 간격 */
+    }
+
     .dial-title { font-size: 12px; color: #555; margin: 6px 0 8px; }
     .dial {
         width: 260px;
@@ -80,12 +86,12 @@
         display: block;
     }
     .legend {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 6px 10px;
-        margin-top: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
         font-size: 12px;
     }
+
     .legend-item { display: flex; align-items: center; gap: 6px; }
     .swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
 
