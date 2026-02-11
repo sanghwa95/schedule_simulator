@@ -41,7 +41,7 @@ DINNER_START, DINNER_END = 18 * 60, 19 * 60
 # Balanced-only knobs
 # ---------------------------
 OT_UTILITY_PER_H = 0.4
-OT_FATIGUE_PER_H = 12.0
+OT_FATIGUE_PER_H = 16.0
 
 
 # ---------------------------
