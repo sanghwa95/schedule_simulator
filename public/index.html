@@ -89,6 +89,17 @@
     .legend-item { display: flex; align-items: center; gap: 6px; }
     .swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
 
+    .actions { display:flex; gap:10px; margin-top:12px; }
+    .actions button { padding:10px 14px; background:#0070f3; color:#fff; border:none; cursor:pointer; font-weight:bold; border-radius:6px; }
+    .actions button.secondary { background:#444; }
+    .actions button:disabled { opacity:0.5; cursor:not-allowed; }
+
+    .card.top1 {
+    border: 2px solid #ffb300;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.10);
+    background: #fffdf5;
+    }
+
   </style>
 </head>
 <body>
@@ -132,24 +143,31 @@
 
 <button onclick="runSimulation()">Run Simulation</button>
 
+<div class="actions">
+  <button id="btnBest" onclick="showBest()" disabled>Show Best (Top 5)</button>
+  <button id="btnWorst" class="secondary" onclick="showWorst()" disabled>Show Worst (Top 5)</button>
+</div>
+
 <div id="output" class="result"></div>
 
 <script>
+
+let lastBest = null;
+let lastWorst = null;
+
 async function runSimulation() {
   const output = document.getElementById("output");
   output.innerHTML = "<div class='loading'>Running simulation...</div>";
 
-  // ✅ hour 단위 입력값을 백엔드가 기대하는 키(min_wake_hour/max_wake_hour)로 보냄
+  // ✅ top=5로 고정 (원하면 input 값 써도 됨)
   const payload = {
     iters: Number(document.getElementById("iters").value),
     seed: Number(document.getElementById("seed").value),
-    top: Number(document.getElementById("top").value),
+    top: 5,
     ot_rate: Number(document.getElementById("ot_rate").value),
     ot_max: Number(document.getElementById("ot_max").value),
-
     min_wake_hour: Number(document.getElementById("min_wake_hour").value),
     max_wake_hour: Number(document.getElementById("max_wake_hour").value),
-
     slot: Number(document.getElementById("slot").value),
   };
 
@@ -160,32 +178,36 @@ async function runSimulation() {
       body: JSON.stringify(payload)
     });
 
-    // ✅ 실패 시에도 응답 바디를 그대로 보여주기 위해 text로 받음
     const text = await res.text();
-
     if (!res.ok) {
       output.innerHTML = `
-        <div style="color:red; font-weight:bold;">
-          Request failed (HTTP ${res.status})
-        </div>
-        <pre style="white-space:pre-wrap; background:#fff; padding:12px; border-radius:8px; box-shadow:0 3px 8px rgba(0,0,0,0.05);">
-${text}
-        </pre>
+        <div style="color:red; font-weight:bold;">Request failed (HTTP ${res.status})</div>
+        <pre style="white-space:pre-wrap; background:#fff; padding:12px; border-radius:8px;">${text}</pre>
       `;
       return;
     }
 
     const data = JSON.parse(text);
-    renderResults(data);
 
+    // ✅ 결과 저장만 해두고 버튼으로 출력
+    lastBest = data.best || [];
+    lastWorst = data.worst || [];
+
+    // 버튼 활성화
+    document.getElementById("btnBest").disabled = (lastBest.length === 0);
+    document.getElementById("btnWorst").disabled = (lastWorst.length === 0);
+
+    // 안내 메시지만 표시
+    output.innerHTML = `
+      <div class="card">
+        Simulation complete.<br>
+        Click <b>Show Best (Top 5)</b> or <b>Show Worst (Top 5)</b>.
+      </div>
+    `;
   } catch (err) {
     output.innerHTML = `
-      <div style="color:red; font-weight:bold;">
-        Error occurred (network/runtime)
-      </div>
-      <pre style="white-space:pre-wrap; background:#fff; padding:12px; border-radius:8px; box-shadow:0 3px 8px rgba(0,0,0,0.05);">
-${String(err)}
-      </pre>
+      <div style="color:red; font-weight:bold;">Error occurred (network/runtime)</div>
+      <pre style="white-space:pre-wrap; background:#fff; padding:12px; border-radius:8px;">${String(err)}</pre>
     `;
   }
 }
@@ -329,6 +351,47 @@ function renderLegend(timeline) {
     );
   }
   return `<div class="legend">${items.join("")}</div>`;
+}
+
+function showBest() {
+  if (!lastBest) return;
+  renderScheduleList("🏆 Best Schedules (Top 5)", lastBest);
+}
+
+function showWorst() {
+  if (!lastWorst) return;
+  renderScheduleList("⚠ Worst Schedules (Top 5)", lastWorst);
+}
+
+function renderScheduleList(title, list) {
+  const output = document.getElementById("output");
+  output.innerHTML = "";
+
+  const header = document.createElement("h2");
+  header.textContent = title;
+  output.appendChild(header);
+
+  list.forEach((item, idx) => {
+    const card = document.createElement("div");
+    card.className = "card" + (idx === 0 ? " top1" : "");
+
+    // (원형 그래프를 이미 넣어둔 상태라면 아래 dial 부분은 그 코드 유지)
+    card.innerHTML = `
+      <strong>#${idx + 1}</strong><br>
+      <strong>Score:</strong> ${item.score}<br>
+      <strong>Wake:</strong> ${item.wake} (${item.sleep_h}h sleep)<br>
+      <strong>Money:</strong> ${item.money_won.toLocaleString()} won<br>
+      <strong>Value:</strong> ${item.value}<br>
+      <strong>Fatigue:</strong> ${item.fatigue}<br>
+      <strong>Penalty:</strong> ${item.penalty}<br>
+
+      <div class="dial-wrap">
+        ${renderDialSVG(item.timeline)}
+        ${renderLegend(item.timeline)}
+      </div>
+    `;
+    output.appendChild(card);
+  });
 }
 
 
