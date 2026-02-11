@@ -531,7 +531,25 @@ function renderStatsCharts(stats) {
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        scales: { y: { beginAtZero: true } }
+        scales: {
+        x: {
+          title: {
+            display: true,
+            text: "Score Range"
+          },
+          ticks: {
+            maxRotation: 90,
+            minRotation: 60
+          }
+        },
+        y: {
+          beginAtZero: true,
+          title: {
+            display: true,
+            text: "Number of Schedules"
+          }
+        }
+    }
       }
     });
 /*
