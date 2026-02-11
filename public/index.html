@@ -198,7 +198,7 @@
     <canvas id="histChart"></canvas>
   </div>
 
-  <div class="chartWrap" style="margin-top:18px;">
+  <div class="chartWrap" style="margin-top:20px;">
     <canvas id="scatterChart"></canvas>
   </div>
 </div>
@@ -251,6 +251,9 @@ async function runSimulation() {
     console.log("STATS:", data.stats);
 
     renderResults(data);
+    requestAnimationFrame(() => {
+        renderStatsCharts(data.stats);
+    });
 
     // ✅ 결과 저장만 해두고 버튼으로 출력
     lastBest = data.best || [];
@@ -470,84 +473,104 @@ function renderTimelineText(timeline) {
 }
 
 function renderStatsCharts(stats) {
-  console.log("[renderStatsCharts] called");
-  console.log("[renderStatsCharts] stats?", !!stats, stats);
-
-  if (!stats) {
-    console.log("[renderStatsCharts] early return: no stats");
-    return;
-  }
-  if (typeof Chart === "undefined") {
-    console.log("[renderStatsCharts] early return: Chart undefined");
-    return;
-  }
+  if (!stats) return;
+  if (typeof Chart === "undefined") return;
 
   requestAnimationFrame(() => {
-    console.log("[renderStatsCharts] RAF fired");
-
     const histCanvas = document.getElementById("histChart");
     const scatterCanvas = document.getElementById("scatterChart");
-    console.log("[renderStatsCharts] canvases:", histCanvas, scatterCanvas);
 
-    if (!histCanvas || !scatterCanvas) {
-      console.log("[renderStatsCharts] early return: canvas not found");
-      return;
+    if (!histCanvas || !scatterCanvas) return;
+
+    // 기존 차트 제거
+    if (histChartRef) {
+      histChartRef.destroy();
+      histChartRef = null;
+    }
+    if (scatterChartRef) {
+      scatterChartRef.destroy();
+      scatterChartRef = null;
     }
 
-    try {
-      // ---- 1) Score Histogram ----
-      const h = stats.score_hist;
-      const edges = h.edges || [];
-      const counts = h.counts || [];
+    // =========================
+    // 1️⃣ Score Histogram
+    // =========================
+    const h = stats.score_hist;
+    const edges = h.edges || [];
+    const counts = h.counts || [];
 
-      const labels = counts.map((_, i) => {
-        const a = edges[i];
-        const b = edges[i + 1];
-        return `${a.toFixed(1)}–${b.toFixed(1)}`;
-      });
+    const labels = counts.map((_, i) => {
+      const a = edges[i];
+      const b = edges[i + 1];
+      return `${a.toFixed(1)}–${b.toFixed(1)}`;
+    });
 
-      if (histChartRef) histChartRef.destroy();
-
-      histChartRef = new Chart(histCanvas.getContext("2d"), {
-        type: "bar",
-        data: {
-          labels,
-          datasets: [{ label: "Score count", data: counts }],
+    histChartRef = new Chart(histCanvas.getContext("2d"), {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [{
+          label: "Score Count",
+          data: counts
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,   // 🔥 중요
+        plugins: {
+          legend: { display: true }
         },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: { y: { beginAtZero: true } },
+        scales: {
+          y: {
+            beginAtZero: true
+          }
+        }
+      }
+    });
+
+    // =========================
+    // 2️⃣ Money vs Fatigue Scatter
+    // =========================
+    const pts = (stats.money_fatigue_scatter || []).map(p => ({
+      x: p.money,
+      y: p.fatigue
+    }));
+
+    scatterChartRef = new Chart(scatterCanvas.getContext("2d"), {
+      type: "scatter",
+      data: {
+        datasets: [{
+          label: "Money vs Fatigue",
+          data: pts,
+          pointRadius: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,   // 🔥 중요
+        plugins: {
+          legend: { display: true }
         },
-      });
-
-      // ---- 2) Money vs Fatigue Scatter ----
-      const pts = (stats.money_fatigue_scatter || []).map((p) => ({
-        x: p.money,
-        y: p.fatigue,
-      }));
-
-      if (scatterChartRef) scatterChartRef.destroy();
-
-      scatterChartRef = new Chart(scatterCanvas.getContext("2d"), {
-        type: "scatter",
-        data: {
-          datasets: [{ label: "Money vs Fatigue", data: pts, pointRadius: 2 }],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            x: { title: { display: true, text: "Money (won)" } },
-            y: { title: { display: true, text: "Fatigue" } },
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: "Money (won)"
+            }
           },
-        },
-      });
+          y: {
+            title: {
+              display: true,
+              text: "Fatigue"
+            }
+          }
+        }
+      }
+    });
 
-      console.log("[renderStatsCharts] charts created:", histChartRef, scatterChartRef);
-    } catch (e) {
-      console.error("[renderStatsCharts] chart creation failed:", e);
-    }
+    // 혹시 모를 레이아웃 문제 방지
+    histChartRef.resize();
+    scatterChartRef.resize();
   });
 }
 
