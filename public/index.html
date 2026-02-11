@@ -80,6 +80,7 @@
     }
 
     .dial-title { font-size: 12px; color: #555; margin: 6px 0 8px; }
+
     .dial {
         width: 240px;
         height: 240px;
@@ -94,11 +95,23 @@
         gap: 12px;
     }
 
+    /* 가운데: legend 영역 */
+    .legend-panel{
+        width: 220px;            /* legend 고정폭 */
+        flex-shrink: 0;
+    }
+
     .legend {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 6px 10px;
         font-size: 12px;
+    }
+
+    /* 오른쪽: timeline 영역 (남는 공간 전부 차지) */
+    .timeline-panel{
+        flex: 1;                 /* ✅ 빨간 체크 부분을 다 먹음 */
+        min-width: 260px;        /* 너무 좁아지지 않게 */
     }
 
     .timeline-text {
@@ -412,13 +425,17 @@ function renderScheduleList(title, list) {
       <strong>Fatigue:</strong> ${item.fatigue}<br>
       <strong>Penalty:</strong> ${item.penalty}<br>
 
-    <div class="dial-wrap">
+      <div class="dial-wrap">
         ${renderDialSVG(item.timeline)}
-        <div class="side-panel">
-            ${renderLegend(item.timeline)}
-            ${renderTimelineText(item.timeline)}
+
+        <div class="legend-panel">
+          ${renderLegend(item.timeline)}
         </div>
-    </div>
+
+        <div class="timeline-panel">
+          ${renderTimelineText(item.timeline)}
+        </div>
+      </div>
     `;
     output.appendChild(card);
   });
