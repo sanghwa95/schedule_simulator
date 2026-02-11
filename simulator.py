@@ -237,11 +237,16 @@ def run_simulation(
     ot_rate: int = 30000,
     ot_max: int = 4,
     slot: int = 30,
+    scatter_sample_n: int = 800,
+    hist_bins: int = 20,
 ) -> Dict[str, Any]:
     """
     Web-friendly wrapper: returns JSON-serializable dict.
     - Keeps your original behavior (breakfast always appears by clamping wake_max <= 08:00).
     - Removes all prints.
+    - Adds stats for charts:
+      (C) score histogram
+      (D) scatter sample (money vs fatigue)
     """
 
     rng = random.Random(seed)
@@ -274,8 +279,11 @@ def run_simulation(
     ] = []
 
     seen = set()
-
     grid_len = 24 * 60 // slot
+
+    # (D) reservoir samples for scatter: (money, fatigue, score)
+    scatter_samples: List[Tuple[float, float, float]] = []
+    stream_i = 0  # how many items have been seen in the stream
 
     for _ in range(iters):
         wake_up = rng.randint(wake_min, effective_wake_max)
@@ -323,9 +331,7 @@ def run_simulation(
                     break
 
         # place allocated activities into FREE slots (fixed: remove early bias)
-        alloc_slots: Dict[str, int] = {
-            k: int(round((h * 60) / slot)) for k, h in alloc.items()
-        }
+        alloc_slots: Dict[str, int] = {k: int(round((h * 60) / slot)) for k, h in alloc.items()}
         fill_free_slots(grid, alloc_slots, rng)
 
         # evaluate
@@ -333,17 +339,30 @@ def run_simulation(
             alloc, activities, sleep_h, overtime_min, ot_rate
         )
 
+        # ---- (D) 그래프용 샘플 저장 (reservoir sampling) ----
+        if scatter_sample_n > 0:
+            if len(scatter_samples) < scatter_sample_n:
+                scatter_samples.append((money, fatigue, score))
+            else:
+                # stream_i is current index (0-based) of the stream
+                j = rng.randint(0, stream_i)
+                if j < scatter_sample_n:
+                    scatter_samples[j] = (money, fatigue, score)
+        stream_i += 1
+
         blocks = compress(grid, slot)
         sig = schedule_signature(wake_up, overtime_min, alloc, blocks)
         if sig in seen:
             continue
         seen.add(sig)
 
-        best_rows.append((score, wake_up, alloc, money, value, fatigue, penalty, prod, fat_mult, blocks))
+        best_rows.append(
+            (score, wake_up, alloc, money, value, fatigue, penalty, prod, fat_mult, blocks)
+        )
 
     best_rows.sort(key=lambda x: x[0], reverse=True)
 
-    # Build JSON
+    # Build JSON helpers
     def blocks_to_json(blocks: List[Tuple[int, int, str]]) -> List[Dict[str, Any]]:
         out: List[Dict[str, Any]] = []
         for s, e, label in blocks:
@@ -375,6 +394,42 @@ def run_simulation(
             "timeline": blocks_to_json(blocks),
         }
 
+    # ---- (C) Score 히스토그램 계산 (정렬 후, return 전) ----
+    scores_all = [r[0] for r in best_rows]
+    if scores_all:
+        s_min = min(scores_all)
+        s_max = max(scores_all)
+    else:
+        s_min, s_max = 0.0, 1.0
+
+    bins = max(5, int(hist_bins))
+    if s_max == s_min:
+        s_max = s_min + 1e-6
+
+    bin_w = (s_max - s_min) / bins
+    edges = [s_min + i * bin_w for i in range(bins + 1)]
+    counts = [0] * bins
+
+    for s in scores_all:
+        idx = int((s - s_min) / bin_w)
+        if idx == bins:  # max edge
+            idx = bins - 1
+        counts[idx] += 1
+
+    hist = {
+        "min": s_min,
+        "max": s_max,
+        "bins": bins,
+        "edges": edges,
+        "counts": counts,
+    }
+
+    # ---- (D) scatter JSON ----
+    scatter = [
+        {"money": float(m), "fatigue": float(f), "score": float(s)}
+        for (m, f, s) in scatter_samples
+    ]
+
     top_n = min(top, len(best_rows))
     worst_rows = list(reversed(best_rows[-top_n:])) if top_n > 0 else []
 
@@ -395,11 +450,17 @@ def run_simulation(
             },
             "overtime": {"rate_won_per_h": ot_rate, "max_h": ot_max, "scheduled_after": hhmm(DINNER_END)},
             "ot_non_money": {"utility_per_h": OT_UTILITY_PER_H, "fatigue_per_h": OT_FATIGUE_PER_H},
+            "charts": {"scatter_sample_n": scatter_sample_n, "hist_bins": hist_bins},
         },
         "best": [row_to_json(r) for r in best_rows[:top_n]],
         "worst": [row_to_json(r) for r in worst_rows],
+        "stats": {
+            "score_hist": hist,
+            "money_fatigue_scatter": scatter,
+        },
         "meta": {
             "unique_schedules": len(best_rows),
             "note": "Schedules are deduplicated by (wake, overtime, alloc, blocks).",
         },
     }
+

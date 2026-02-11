@@ -188,6 +188,13 @@
   <button id="btnWorst" class="secondary" onclick="showWorst()" disabled>Show Worst (Top 5)</button>
 </div>
 
+<div class="card">
+  <h2>📊 Statistics</h2>
+  <canvas id="histChart" height="120"></canvas>
+  <div style="height:16px;"></div>
+  <canvas id="scatterChart" height="140"></canvas>
+</div>
+
 <div id="output" class="result"></div>
 
 <script>
@@ -228,6 +235,8 @@ async function runSimulation() {
     }
 
     const data = JSON.parse(text);
+
+    renderResults(data);
 
     // ✅ 결과 저장만 해두고 버튼으로 출력
     lastBest = data.best || [];
@@ -446,8 +455,75 @@ function renderTimelineText(timeline) {
   return `<div class="timeline-text">${lines.join("<br>")}</div>`;
 }
 
+let histChartRef = null;
+let scatterChartRef = null;
+
+function renderStatsCharts(stats) {
+  if (!stats) return;
+
+  // ---- 1) Score Histogram ----
+  const h = stats.score_hist;
+  const edges = h.edges;     // length bins+1
+  const counts = h.counts;   // length bins
+  const labels = counts.map((_, i) => {
+    const a = edges[i];
+    const b = edges[i+1];
+    return `${a.toFixed(1)}–${b.toFixed(1)}`;
+  });
+
+  const histCtx = document.getElementById("histChart").getContext("2d");
+  if (histChartRef) histChartRef.destroy();
+  histChartRef = new Chart(histCtx, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [{
+        label: "Score count",
+        data: counts
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: true } },
+      scales: {
+        x: { ticks: { maxRotation: 90, minRotation: 60 } },
+        y: { beginAtZero: true }
+      }
+    }
+  });
+
+  // ---- 2) Money vs Fatigue Scatter ----
+  const pts = stats.money_fatigue_scatter.map(p => ({
+    x: p.money,
+    y: p.fatigue
+  }));
+
+  const scatterCtx = document.getElementById("scatterChart").getContext("2d");
+  if (scatterChartRef) scatterChartRef.destroy();
+  scatterChartRef = new Chart(scatterCtx, {
+    type: "scatter",
+    data: {
+      datasets: [{
+        label: "Money vs Fatigue",
+        data: pts,
+        pointRadius: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: true } },
+      scales: {
+        x: { title: { display: true, text: "Money (won)" } },
+        y: { title: { display: true, text: "Fatigue" } }
+      }
+    }
+  });
+}
+
 
 </script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 </body>
 </html>
