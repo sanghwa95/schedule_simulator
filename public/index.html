@@ -191,7 +191,6 @@ function renderResults(data) {
         <strong>Value:</strong> ${item.value}<br>
         <strong>Fatigue:</strong> ${item.fatigue}<br>
         <strong>Penalty:</strong> ${item.penalty}<br>
-        <strong>Alloc:</strong> ${JSON.stringify(item.alloc_hours)}
         <div class="timeline">
           ${item.timeline.map(t => `${t.start}–${t.end} ${t.label}`).join("<br>")}
         </div>
