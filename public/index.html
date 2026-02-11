@@ -99,12 +99,12 @@
     <input id="ot_max" type="number" value="4">
   </div>
   <div>
-    <label>Wake Min (min)</label>
-    <input id="wake_min" type="number" value="360">
+    <label>Minimum Wake-up Hour</label>
+    <input id="min_wake_hour" type="number" value="6" min="0" max="12">
   </div>
   <div>
-    <label>Wake Max (min)</label>
-    <input id="wake_max" type="number" value="540">
+    <label>Maximum Wake-up Hour</label>
+    <input id="max_wake_hour" type="number" value="9" min="0" max="12">
   </div>
   <div>
     <label>Slot (min)</label>
@@ -127,8 +127,8 @@ async function runSimulation() {
     top: Number(document.getElementById("top").value),
     ot_rate: Number(document.getElementById("ot_rate").value),
     ot_max: Number(document.getElementById("ot_max").value),
-    wake_min: Number(document.getElementById("wake_min").value),
-    wake_max: Number(document.getElementById("wake_max").value),
+    min_wake_hour: Number(document.getElementById("min_wake_hour").value),
+    max_wake_hour: Number(document.getElementById("max_wake_hour").value),
     slot: Number(document.getElementById("slot").value),
   };
 

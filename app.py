@@ -22,8 +22,8 @@ class SimRequest(BaseModel):
     top: int = Field(5, ge=1, le=50, description="How many top/bottom schedules to return")
 
     # wake-up range (minutes from 00:00)
-    wake_min: int = Field(360, ge=0, le=24 * 60, description="Minimum wake-up time in minutes")
-    wake_max: int = Field(540, ge=0, le=24 * 60, description="Maximum wake-up time in minutes")
+    min_wake_hour: int = Field(6, ge=0, le=12, description="Minimum wake-up hour (0–12)")
+    wake_max: int = Field(540, ge=0, le=24 * 60, description="Maximum wake-up hour (0–12)")
 
     # overtime rules
     ot_rate: int = Field(30000, ge=0, le=1_000_000, description="Overtime pay (won/hour)")
@@ -49,7 +49,18 @@ def simulate(req: SimRequest):
     """
     Run simulation and return JSON result.
     """
-    result = run_simulation(**req.model_dump())
+
+    result = run_simulation(
+        iters=req.iters,
+        seed=req.seed,
+        top=req.top,
+        wake_min=req.min_wake_hour * 60,
+        wake_max=req.max_wake_hour * 60,
+        ot_rate=req.ot_rate,
+        ot_max=req.ot_max,
+        slot=req.slot,
+    )
+
     return JSONResponse(result)
 
 
