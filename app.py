@@ -8,7 +8,9 @@ from pydantic import BaseModel, Field
 
 from simulator import run_simulation
 
-app = FastAPI(title="Time = Money Simulator", version="1.0.0")
+from fastapi.responses import RedirectResponse
+
+app = FastAPI(title="Schedule Simulator", version="1.0.0")
 
 
 # ---------------------------
@@ -56,7 +58,4 @@ def simulate(req: SimRequest):
 # ---------------------------
 @app.get("/")
 def root():
-    return {
-        "message": "Time = Money Simulator API",
-        "endpoints": ["/api/health", "/api/simulate", "/docs"],
-    }
+    return RedirectResponse(url="/index.html")
