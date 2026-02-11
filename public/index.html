@@ -470,77 +470,84 @@ function renderTimelineText(timeline) {
 }
 
 function renderStatsCharts(stats) {
-  if (!stats) return;
-  if (typeof Chart === "undefined") return;
+  console.log("[renderStatsCharts] called");
+  console.log("[renderStatsCharts] stats?", !!stats, stats);
 
-  // 🔥 여기서 한 프레임 늦게 실행
+  if (!stats) {
+    console.log("[renderStatsCharts] early return: no stats");
+    return;
+  }
+  if (typeof Chart === "undefined") {
+    console.log("[renderStatsCharts] early return: Chart undefined");
+    return;
+  }
+
   requestAnimationFrame(() => {
+    console.log("[renderStatsCharts] RAF fired");
 
     const histCanvas = document.getElementById("histChart");
     const scatterCanvas = document.getElementById("scatterChart");
-    if (!histCanvas || !scatterCanvas) return;
+    console.log("[renderStatsCharts] canvases:", histCanvas, scatterCanvas);
 
-    // ---- 1) Score Histogram ----
-    const h = stats.score_hist;
-    const edges = h.edges || [];
-    const counts = h.counts || [];
+    if (!histCanvas || !scatterCanvas) {
+      console.log("[renderStatsCharts] early return: canvas not found");
+      return;
+    }
 
-    const labels = counts.map((_, i) => {
-      const a = edges[i];
-      const b = edges[i + 1];
-      return `${a.toFixed(1)}–${b.toFixed(1)}`;
-    });
+    try {
+      // ---- 1) Score Histogram ----
+      const h = stats.score_hist;
+      const edges = h.edges || [];
+      const counts = h.counts || [];
 
-    if (histChartRef) histChartRef.destroy();
+      const labels = counts.map((_, i) => {
+        const a = edges[i];
+        const b = edges[i + 1];
+        return `${a.toFixed(1)}–${b.toFixed(1)}`;
+      });
 
-    histChartRef = new Chart(histCanvas.getContext("2d"), {
-      type: "bar",
-      data: {
-        labels,
-        datasets: [{
-          label: "Score count",
-          data: counts
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          y: { beginAtZero: true }
-        }
-      }
-    });
+      if (histChartRef) histChartRef.destroy();
 
-    // ---- 2) Scatter ----
-    const pts = (stats.money_fatigue_scatter || []).map(p => ({
-      x: p.money,
-      y: p.fatigue
-    }));
+      histChartRef = new Chart(histCanvas.getContext("2d"), {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [{ label: "Score count", data: counts }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: { y: { beginAtZero: true } },
+        },
+      });
 
-    if (scatterChartRef) scatterChartRef.destroy();
+      // ---- 2) Money vs Fatigue Scatter ----
+      const pts = (stats.money_fatigue_scatter || []).map((p) => ({
+        x: p.money,
+        y: p.fatigue,
+      }));
 
-    scatterChartRef = new Chart(scatterCanvas.getContext("2d"), {
-      type: "scatter",
-      data: {
-        datasets: [{
-          label: "Money vs Fatigue",
-          data: pts,
-          pointRadius: 2
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          x: { title: { display: true, text: "Money (won)" } },
-          y: { title: { display: true, text: "Fatigue" } }
-        }
-      }
-    });
+      if (scatterChartRef) scatterChartRef.destroy();
 
-    // 강제 리사이즈 (혹시 모를 레이아웃 문제 방지)
-    histChartRef.resize();
-    scatterChartRef.resize();
+      scatterChartRef = new Chart(scatterCanvas.getContext("2d"), {
+        type: "scatter",
+        data: {
+          datasets: [{ label: "Money vs Fatigue", data: pts, pointRadius: 2 }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { title: { display: true, text: "Money (won)" } },
+            y: { title: { display: true, text: "Fatigue" } },
+          },
+        },
+      });
+
+      console.log("[renderStatsCharts] charts created:", histChartRef, scatterChartRef);
+    } catch (e) {
+      console.error("[renderStatsCharts] chart creation failed:", e);
+    }
   });
 }
 
