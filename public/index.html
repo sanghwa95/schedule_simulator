@@ -71,6 +71,24 @@
       font-weight: bold;
       color: #0070f3;
     }
+
+    .dial-wrap { margin-top: 10px; }
+    .dial-title { font-size: 12px; color: #555; margin: 6px 0 8px; }
+    .dial {
+        width: 260px;
+        height: 260px;
+        display: block;
+    }
+    .legend {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px 10px;
+        margin-top: 10px;
+        font-size: 12px;
+    }
+    .legend-item { display: flex; align-items: center; gap: 6px; }
+    .swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+
   </style>
 </head>
 <body>
@@ -192,7 +210,9 @@ function renderResults(data) {
         <strong>Fatigue:</strong> ${item.fatigue}<br>
         <strong>Penalty:</strong> ${item.penalty}<br>
         <div class="timeline">
-          ${item.timeline.map(t => `${t.start}–${t.end} ${t.label}`).join("<br>")}
+          <div class="dial-title">Timeline (24h)</div>
+            ${renderDialSVG(item.timeline)}
+            ${renderLegend(item.timeline)}
         </div>
       `;
       section.appendChild(card);
@@ -203,6 +223,116 @@ function renderResults(data) {
   renderSchedule("🏆 Best Schedules", data.best);
   renderSchedule("⚠ Worst Schedules", data.worst);
 }
+
+function clamp01(x) { return Math.max(0, Math.min(1, x)); }
+
+function polar(cx, cy, r, angleRad) {
+  return { x: cx + r * Math.cos(angleRad), y: cy + r * Math.sin(angleRad) };
+}
+
+// startMin/endMin: [0, 1440], 00:00이 위(12시 방향), 시계방향 진행
+function arcPath(cx, cy, rOuter, rInner, startMin, endMin) {
+  const day = 1440;
+
+  // 00:00을 12시 방향으로 맞추기 위해 -90도(= -pi/2) 오프셋
+  const startA = (startMin / day) * 2 * Math.PI - Math.PI / 2;
+  const endA   = (endMin   / day) * 2 * Math.PI - Math.PI / 2;
+
+  // 큰 호 여부
+  let delta = endA - startA;
+  // end가 0 넘어가는 경우(예: 23:00~00:00) 이미 endMin=1440으로 들어오므로 괜찮음
+  const largeArc = delta > Math.PI ? 1 : 0;
+
+  const p1 = polar(cx, cy, rOuter, startA);
+  const p2 = polar(cx, cy, rOuter, endA);
+  const p3 = polar(cx, cy, rInner, endA);
+  const p4 = polar(cx, cy, rInner, startA);
+
+  // outer arc (clockwise), inner arc (counterclockwise)
+  return [
+    `M ${p1.x.toFixed(3)} ${p1.y.toFixed(3)}`,
+    `A ${rOuter} ${rOuter} 0 ${largeArc} 1 ${p2.x.toFixed(3)} ${p2.y.toFixed(3)}`,
+    `L ${p3.x.toFixed(3)} ${p3.y.toFixed(3)}`,
+    `A ${rInner} ${rInner} 0 ${largeArc} 0 ${p4.x.toFixed(3)} ${p4.y.toFixed(3)}`,
+    "Z"
+  ].join(" ");
+}
+
+// 라벨별 색상 (원하면 조정)
+function labelColor(label) {
+  const map = {
+    "sleep": "#6c7ae0",
+    "work": "#333333",
+    "overtime work": "#ff8a00",
+    "breakfast": "#00a86b",
+    "lunch": "#00a86b",
+    "dinner": "#00a86b",
+    "study": "#00bcd4",
+    "hobby": "#9c27b0",
+    "exercise": "#e91e63",
+    "rest": "#607d8b",
+  };
+  return map[label] || "#999999";
+}
+
+function renderDialSVG(timeline) {
+  // timeline: [{start_min, end_min, label, start, end}, ...]
+  const size = 260;
+  const cx = size / 2;
+  const cy = size / 2;
+  const rOuter = 120;
+  const rInner = 78;
+
+  // SVG 조각 만들기
+  const slices = timeline.map(seg => {
+    const d = arcPath(cx, cy, rOuter, rInner, seg.start_min, seg.end_min);
+    const color = labelColor(seg.label);
+    const title = `${seg.start}–${seg.end} ${seg.label}`;
+    return `<path d="${d}" fill="${color}"><title>${title}</title></path>`;
+  }).join("");
+
+  // 시각 표시용 눈금(선택)
+  const ticks = [0, 6, 12, 18].map(h => {
+    const a = (h / 24) * 2 * Math.PI - Math.PI / 2;
+    const p1 = polar(cx, cy, rOuter + 2, a);
+    const p2 = polar(cx, cy, rOuter + 14, a);
+    return `<line x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" stroke="#bbb" stroke-width="2"/>`;
+  }).join("");
+
+  const labels = [0, 6, 12, 18].map(h => {
+    const a = (h / 24) * 2 * Math.PI - Math.PI / 2;
+    const p = polar(cx, cy, rOuter + 28, a);
+    const text = String(h).padStart(2, "0");
+    return `<text x="${p.x}" y="${p.y}" text-anchor="middle" dominant-baseline="middle" font-size="12" fill="#666">${text}</text>`;
+  }).join("");
+
+  return `
+    <svg class="dial" viewBox="0 0 ${size} ${size}" role="img" aria-label="Daily schedule dial">
+      <circle cx="${cx}" cy="${cy}" r="${rOuter}" fill="#f3f5f8"></circle>
+      ${slices}
+      <circle cx="${cx}" cy="${cy}" r="${rInner}" fill="white"></circle>
+      ${ticks}
+      ${labels}
+      <circle cx="${cx}" cy="${cy}" r="2" fill="#888"></circle>
+    </svg>
+  `;
+}
+
+function renderLegend(timeline) {
+  // 라벨별로 중복 제거해서 legend 구성
+  const seen = new Set();
+  const items = [];
+  for (const seg of timeline) {
+    if (seen.has(seg.label)) continue;
+    seen.add(seg.label);
+    items.push(
+      `<div class="legend-item"><span class="swatch" style="background:${labelColor(seg.label)}"></span>${seg.label}</div>`
+    );
+  }
+  return `<div class="legend">${items.join("")}</div>`;
+}
+
+
 </script>
 
 </body>
