@@ -27,7 +27,7 @@ class SimRequest(BaseModel):
 
     # overtime rules
     ot_rate: int = Field(30000, ge=0, le=1_000_000, description="Overtime pay (won/hour)")
-    ot_max: int = Field(4, ge=0, le=12, description="Max overtime hours/day")
+    ot_max: int = Field(5, ge=0, le=12, description="Max overtime hours/day")
 
     # time resolution
     slot: int = Field(30, ge=5, le=60, description="Slot size in minutes (grid resolution)")
