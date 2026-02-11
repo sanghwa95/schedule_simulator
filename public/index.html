@@ -197,11 +197,11 @@
   <div class="chartWrap">
     <canvas id="histChart"></canvas>
   </div>
-
+<!--
   <div class="chartWrap" style="margin-top:20px;">
     <canvas id="scatterChart"></canvas>
   </div>
-
+-->
   <div class="chartWrap" style="margin-top:20px;">
     <canvas id="sleepScoreChart"></canvas>
   </div>
@@ -489,11 +489,12 @@ function renderStatsCharts(stats) {
 
   requestAnimationFrame(() => {
     const histCanvas = document.getElementById("histChart");
-    const scatterCanvas = document.getElementById("scatterChart");
+    //const scatterCanvas = document.getElementById("scatterChart");
     const sleepScoreCanvas = document.getElementById("sleepScoreChart");
     const moneyScoreCanvas = document.getElementById("moneyScoreChart");
 
-    if (!histCanvas || !scatterCanvas || !sleepScoreCanvas || !moneyScoreCanvas) return;
+    //if (!histCanvas || !scatterCanvas || !sleepScoreCanvas || !moneyScoreCanvas) return;
+    if (!histCanvas || !sleepScoreCanvas || !moneyScoreCanvas) return;
 
     // -----------------------------
     // 기존 차트 제거
@@ -655,7 +656,7 @@ function renderStatsCharts(stats) {
 
     // 안전장치
     histChartRef.resize();
-    scatterChartRef.resize();
+    //scatterChartRef.resize();
     sleepScoreChartRef.resize();
     moneyScoreChartRef.resize();
   });
