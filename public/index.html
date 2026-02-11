@@ -506,7 +506,7 @@ function renderStatsCharts(stats) {
     const samples = stats.money_fatigue_scatter || [];
 
     // =============================
-    // 1️⃣ Score Histogram
+    // 1) Score Histogram
     // =============================
     const h = stats.score_hist;
     const edges = h.edges || [];
@@ -530,28 +530,38 @@ function renderStatsCharts(stats) {
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        scales: {
-          y: { beginAtZero: true }
-        }
+        scales: { y: { beginAtZero: true } }
       }
     });
 
     // =============================
-    // 2️⃣ Money vs Fatigue
+    // 2) Money vs Fatigue (+ Trend)
     // =============================
     const ptsMoneyFatigue = samples.map(p => ({
       x: p.money,
       y: p.fatigue
     }));
 
+    const lrMF = linearRegression(ptsMoneyFatigue);
+    const trendMF = makeTrendLine(ptsMoneyFatigue, lrMF);
+
     scatterChartRef = new Chart(scatterCanvas.getContext("2d"), {
       type: "scatter",
       data: {
-        datasets: [{
-          label: "Money vs Fatigue",
-          data: ptsMoneyFatigue,
-          pointRadius: 2
-        }]
+        datasets: [
+          {
+            label: "Money vs Fatigue",
+            data: ptsMoneyFatigue,
+            pointRadius: 2
+          },
+          {
+            label: "Trend",
+            data: trendMF,
+            type: "line",
+            borderWidth: 2,
+            pointRadius: 0
+          }
+        ]
       },
       options: {
         responsive: true,
@@ -564,7 +574,7 @@ function renderStatsCharts(stats) {
     });
 
     // =============================
-    // 3️⃣ Sleep vs Score
+    // 3) Sleep vs Score (+ Trend)
     // =============================
     const ptsSleepScore = samples
       .filter(p => typeof p.sleep_h === "number")
@@ -573,47 +583,65 @@ function renderStatsCharts(stats) {
         y: p.score
       }));
 
+    const lrSS = linearRegression(ptsSleepScore);
+    const trendSS = makeTrendLine(ptsSleepScore, lrSS);
+
     sleepScoreChartRef = new Chart(sleepScoreCanvas.getContext("2d"), {
       type: "scatter",
       data: {
-        datasets: [{
-          label: "Sleep vs Score",
-          data: ptsSleepScore,
-          pointRadius: 2
-        }]
+        datasets: [
+          {
+            label: "Sleep vs Score",
+            data: ptsSleepScore,
+            pointRadius: 2
+          },
+          {
+            label: "Trend",
+            data: trendSS,
+            type: "line",
+            borderWidth: 2,
+            pointRadius: 0
+          }
+        ]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         scales: {
-          x: {
-            title: { display: true, text: "Sleep (hours)" },
-            min: 0,
-            max: 12
-          },
-          y: {
-            title: { display: true, text: "Score" }
-          }
+          x: { title: { display: true, text: "Sleep (hours)" }, min: 0, max: 12 },
+          y: { title: { display: true, text: "Score" } }
         }
       }
     });
 
     // =============================
-    // 4️⃣ Money vs Score
+    // 4) Money vs Score (+ Trend)
     // =============================
     const ptsMoneyScore = samples.map(p => ({
       x: p.money,
       y: p.score
     }));
 
+    const lrMS = linearRegression(ptsMoneyScore);
+    const trendMS = makeTrendLine(ptsMoneyScore, lrMS);
+
     moneyScoreChartRef = new Chart(moneyScoreCanvas.getContext("2d"), {
       type: "scatter",
       data: {
-        datasets: [{
-          label: "Money vs Score",
-          data: ptsMoneyScore,
-          pointRadius: 2
-        }]
+        datasets: [
+          {
+            label: "Money vs Score",
+            data: ptsMoneyScore,
+            pointRadius: 2
+          },
+          {
+            label: "Trend",
+            data: trendMS,
+            type: "line",
+            borderWidth: 2,
+            pointRadius: 0
+          }
+        ]
       },
       options: {
         responsive: true,
@@ -625,14 +653,45 @@ function renderStatsCharts(stats) {
       }
     });
 
-    // -----------------------------
-    // 강제 리사이즈 (안전장치)
-    // -----------------------------
+    // 안전장치
     histChartRef.resize();
     scatterChartRef.resize();
     sleepScoreChartRef.resize();
     moneyScoreChartRef.resize();
   });
+}
+
+function linearRegression(points) {
+  const n = points.length;
+  if (n === 0) return null;
+
+  let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+
+  for (const p of points) {
+    sumX += p.x;
+    sumY += p.y;
+    sumXY += p.x * p.y;
+    sumXX += p.x * p.x;
+  }
+
+  const slope = (n * sumXY - sumX * sumY) /
+                (n * sumXX - sumX * sumX);
+
+  const intercept = (sumY - slope * sumX) / n;
+
+  return { slope, intercept };
+}
+
+
+function makeTrendLine(points, lr) {
+  if (!lr || points.length === 0) return [];
+  const xs = points.map(p => p.x);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  return [
+    { x: minX, y: lr.slope * minX + lr.intercept },
+    { x: maxX, y: lr.slope * maxX + lr.intercept }
+  ];
 }
 
 
