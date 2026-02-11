@@ -211,6 +211,9 @@
 let lastBest = null;
 let lastWorst = null;
 
+let histChartRef = null;
+let scatterChartRef = null;
+
 async function runSimulation() {
   const output = document.getElementById("output");
   output.innerHTML = "<div class='loading'>Running simulation...</div>";
@@ -465,9 +468,6 @@ function renderTimelineText(timeline) {
   const lines = timeline.map(t => `${t.start}–${t.end} ${t.label}`);
   return `<div class="timeline-text">${lines.join("<br>")}</div>`;
 }
-
-let histChartRef = null;
-let scatterChartRef = null;
 
 function renderStatsCharts(stats) {
   if (!stats) return;
