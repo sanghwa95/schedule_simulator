@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>Time = Money Simulator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1000px;
+      margin: 40px auto;
+      padding: 0 20px;
+      background: #f7f9fc;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    label {
+      font-size: 12px;
+      color: #555;
+    }
+
+    input {
+      width: 100%;
+      padding: 6px;
+      margin-top: 3px;
+    }
+
+    button {
+      margin-top: 15px;
+      padding: 10px;
+      background: #0070f3;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background: #0059c9;
+    }
+
+    .result {
+      margin-top: 30px;
+    }
+
+    .card {
+      background: white;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.05);
+    }
+
+    .timeline {
+      font-family: monospace;
+      font-size: 13px;
+      margin-top: 10px;
+    }
+
+    .loading {
+      text-align: center;
+      font-weight: bold;
+      color: #0070f3;
+    }
+  </style>
+</head>
+<body>
+
+<h1>💰 Time = Money Simulator</h1>
+
+<div class="controls">
+  <div>
+    <label>Iterations</label>
+    <input id="iters" type="number" value="10000">
+  </div>
+  <div>
+    <label>Seed</label>
+    <input id="seed" type="number" value="1">
+  </div>
+  <div>
+    <label>Top</label>
+    <input id="top" type="number" value="3">
+  </div>
+  <div>
+    <label>Overtime Rate (won/h)</label>
+    <input id="ot_rate" type="number" value="30000">
+  </div>
+  <div>
+    <label>Max OT Hours</label>
+    <input id="ot_max" type="number" value="4">
+  </div>
+  <div>
+    <label>Wake Min (min)</label>
+    <input id="wake_min" type="number" value="360">
+  </div>
+  <div>
+    <label>Wake Max (min)</label>
+    <input id="wake_max" type="number" value="540">
+  </div>
+  <div>
+    <label>Slot (min)</label>
+    <input id="slot" type="number" value="30">
+  </div>
+</div>
+
+<button onclick="runSimulation()">Run Simulation</button>
+
+<div id="output" class="result"></div>
+
+<script>
+async function runSimulation() {
+  const output = document.getElementById("output");
+  output.innerHTML = "<div class='loading'>Running simulation...</div>";
+
+  const payload = {
+    iters: Number(document.getElementById("iters").value),
+    seed: Number(document.getElementById("seed").value),
+    top: Number(document.getElementById("top").value),
+    ot_rate: Number(document.getElementById("ot_rate").value),
+    ot_max: Number(document.getElementById("ot_max").value),
+    wake_min: Number(document.getElementById("wake_min").value),
+    wake_max: Number(document.getElementById("wake_max").value),
+    slot: Number(document.getElementById("slot").value),
+  };
+
+  try {
+    const res = await fetch("/api/simulate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+    renderResults(data);
+
+  } catch (err) {
+    output.innerHTML = "<div style='color:red'>Error occurred.</div>";
+  }
+}
+
+function renderResults(data) {
+  const output = document.getElementById("output");
+  output.innerHTML = "";
+
+  function renderSchedule(title, list) {
+    const section = document.createElement("div");
+    section.innerHTML = `<h2>${title}</h2>`;
+    list.forEach(item => {
+      const card = document.createElement("div");
+      card.className = "card";
+
+      card.innerHTML = `
+        <strong>Score:</strong> ${item.score}<br>
+        <strong>Wake:</strong> ${item.wake} (${item.sleep_h}h sleep)<br>
+        <strong>Money:</strong> ${item.money_won.toLocaleString()} won<br>
+        <strong>Value:</strong> ${item.value}<br>
+        <strong>Fatigue:</strong> ${item.fatigue}<br>
+        <strong>Penalty:</strong> ${item.penalty}<br>
+        <strong>Alloc:</strong> ${JSON.stringify(item.alloc_hours)}
+        <div class="timeline">
+          ${item.timeline.map(t => `${t.start}–${t.end} ${t.label}`).join("<br>")}
+        </div>
+      `;
+      section.appendChild(card);
+    });
+    output.appendChild(section);
+  }
+
+  renderSchedule("🏆 Best Schedules", data.best);
+  renderSchedule("⚠ Worst Schedules", data.worst);
+}
+</script>
+
+</body>
+</html>
