@@ -75,21 +75,42 @@
     .dial-wrap {
       margin-top: 10px;
       display: flex;
-      align-items: center;   /* 수직 정렬 */
-      gap: 24px;             /* 그래프와 legend 사이 간격 */
+      align-items: flex-start;
+      gap: 24px;
     }
 
     .dial-title { font-size: 12px; color: #555; margin: 6px 0 8px; }
     .dial {
-        width: 260px;
-        height: 260px;
-        display: block;
+        width: 240px;
+        height: 240px;
+        flex-shrink: 0;
     }
-    .legend {
+
+    /* 오른쪽 패널: legend + timeline */
+    .side-panel {
+        width: 320px;        /* ✅ 오른쪽이 너무 허전하지 않게 고정폭 */
         display: flex;
         flex-direction: column;
-        gap: 6px;
+        gap: 12px;
+    }
+
+    .legend {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px 10px;
         font-size: 12px;
+    }
+
+    .timeline-text {
+        font-family: monospace;
+        font-size: 12px;
+        line-height: 1.45;
+        background: #ffffff;
+        border: 1px solid #eee;
+        border-radius: 8px;
+        padding: 10px;
+        max-height: 220px;   /* ✅ 길면 스크롤 */
+        overflow: auto;
     }
 
     .legend-item { display: flex; align-items: center; gap: 6px; }
@@ -391,13 +412,21 @@ function renderScheduleList(title, list) {
       <strong>Fatigue:</strong> ${item.fatigue}<br>
       <strong>Penalty:</strong> ${item.penalty}<br>
 
-      <div class="dial-wrap">
+    <div class="dial-wrap">
         ${renderDialSVG(item.timeline)}
-        ${renderLegend(item.timeline)}
-      </div>
+        <div class="side-panel">
+            ${renderLegend(item.timeline)}
+            ${renderTimelineText(item.timeline)}
+        </div>
+    </div>
     `;
     output.appendChild(card);
   });
+}
+
+function renderTimelineText(timeline) {
+  const lines = timeline.map(t => `${t.start}–${t.end} ${t.label}`);
+  return `<div class="timeline-text">${lines.join("<br>")}</div>`;
 }
 
 
