@@ -236,6 +236,8 @@ async function runSimulation() {
 
     const data = JSON.parse(text);
 
+    console.log("STATS:", data.stats);
+
     renderResults(data);
 
     // ✅ 결과 저장만 해두고 버튼으로 출력
