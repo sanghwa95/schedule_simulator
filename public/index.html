@@ -483,11 +483,6 @@ function renderTimelineText(timeline) {
   return `<div class="timeline-text">${lines.join("<br>")}</div>`;
 }
 
-let histChartRef = null;
-let scatterChartRef = null;
-let sleepScoreChartRef = null;
-let moneyScoreChartRef = null;
-
 function renderStatsCharts(stats) {
   if (!stats) return;
   if (typeof Chart === "undefined") return;
