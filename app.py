@@ -23,7 +23,7 @@ class SimRequest(BaseModel):
 
     # wake-up range (minutes from 00:00)
     min_wake_hour: int = Field(6, ge=0, le=12, description="Minimum wake-up hour (0–12)")
-    wake_max: int = Field(540, ge=0, le=24 * 60, description="Maximum wake-up hour (0–12)")
+    max_wake_hour: int = Field(9, ge=0, le=12, description="Maximum wake-up hour (0–12)")
 
     # overtime rules
     ot_rate: int = Field(30000, ge=0, le=1_000_000, description="Overtime pay (won/hour)")
