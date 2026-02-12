@@ -172,7 +172,7 @@
   </div>
   <div>
     <label>Minimum Wake-up Hour</label>
-    <input id="min_wake_hour" type="number" value="2" min="0" max="12">
+    <input id="min_wake_hour" type="number" value="0" min="0" max="12">
   </div>
   <div>
     <label>Maximum Wake-up Hour</label>
@@ -627,7 +627,7 @@ function renderStatsCharts(stats) {
         responsive: true,
         maintainAspectRatio: false,
         scales: {
-          x: { title: { display: true, text: "Sleep (hours)" }, min: 0, max: 12 },
+          x: { title: { display: true, text: "Sleep (hours)" }, min: 0, max: 8 },
           y: { title: { display: true, text: "Score" } }
         }
       }

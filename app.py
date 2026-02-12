@@ -3,12 +3,10 @@
 from __future__ import annotations
 
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel, Field
 
 from simulator import run_simulation
-
-from fastapi.responses import RedirectResponse
 
 app = FastAPI(title="Schedule Simulator", version="1.0.0")
 
@@ -17,12 +15,13 @@ app = FastAPI(title="Schedule Simulator", version="1.0.0")
 # Request schema (validation)
 # ---------------------------
 class SimRequest(BaseModel):
-    iters: int = Field(10000, ge=1, le=200_000, description="Number of iterations")
+    # ❌ le=200_000 제거
+    iters: int = Field(10000, ge=1, description="Number of iterations")
     seed: int = Field(1, description="RNG seed")
     top: int = Field(5, ge=1, le=50, description="How many top/bottom schedules to return")
 
-    # wake-up range (minutes from 00:00)
-    min_wake_hour: int = Field(2, ge=0, le=12, description="Minimum wake-up hour (0–12)")
+    # wake-up range (hours)
+    min_wake_hour: int = Field(0, ge=0, le=12, description="Minimum wake-up hour (0–12)")
     max_wake_hour: int = Field(9, ge=0, le=12, description="Maximum wake-up hour (0–12)")
 
     # overtime rules
@@ -48,10 +47,15 @@ def health():
 def simulate(req: SimRequest):
     """
     Run simulation and return JSON result.
+    Automatically clamp iterations to 200,000.
     """
 
+    # ✅ 자동 보정
+    MAX_ITERS = 200_000
+    safe_iters = min(req.iters, MAX_ITERS)
+
     result = run_simulation(
-        iters=req.iters,
+        iters=safe_iters,
         seed=req.seed,
         top=req.top,
         wake_min=req.min_wake_hour * 60,
