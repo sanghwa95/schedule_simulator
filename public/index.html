@@ -233,7 +233,7 @@ async function runSimulation() {
   const payload = {
     iters: Number(document.getElementById("iters").value),
     seed: Number(document.getElementById("seed").value),
-    top: 5,
+    top: Number(document.getElementById("top").value),
     ot_rate: Number(document.getElementById("ot_rate").value),
     ot_max: Number(document.getElementById("ot_max").value),
     min_wake_hour: Number(document.getElementById("min_wake_hour").value),
