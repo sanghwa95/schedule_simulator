@@ -11,7 +11,15 @@
 
 ---
 
-## 배포 주소: schedule-simulator.vercel.app
+## 배포 주소
+
+👉 https://schedule-simulator.vercel.app
 
 ---
 
+## 사용법
+
+1. 웹페이지의 입력란을 통해 반복 횟수(스케줄 개수), 야근 수당, 야근 최대 시간 등을 설정(default 값 존재)
+2. Run Simulation 버튼을 클릭하여 실행
+3. Show Best 또는 Show Worst 버튼을 클릭하여 상·하위 5개의 스케줄을 확인
+4. 시각화 자료를 통해 여러 요소와 삶의 질 간의 관계에 대한 통찰 제공
